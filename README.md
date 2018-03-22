@@ -1,1 +1,1 @@
-# acmicpc相关复习
+# acmicpc
