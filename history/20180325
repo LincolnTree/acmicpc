@@ -1,1 +1,3 @@
 Pull request.
+使用Spark ALS实现协同过滤:http://blog.javachen.com/2015/06/01/how-to-implement-collaborative-filtering-using-spark-als.html
+定性分析ALS 在 Spark MLlib 中的实现：http://dataunion.org/16856.html
