@@ -1,0 +1,162 @@
+AC自动机，字典树加kmp思想，但和kmp有点不一样，直接指向与当前节点字母相同的上层节点。
+https://www.bilibili.com/video/av6295004/index_2.html#page=1
+
+后缀数组倍增算法：基于基数排序和倍增的思想。
+
+观摩一下AC群里的dfa算法：
+https://paste.ubuntu.com/p/tqW3n4B9Xd/
+
+package tag
+
+import (
+	"database/sql"
+	"errors"
+	"golib/tlog"
+	"strings"
+	"sync"
+)
+
+//use dfa to match
+
+type match struct {
+	tag_id int32
+	word   string
+	is_end bool
+	next   map[string]*match
+}
+
+var conn *sql.DB
+var cacheMap map[string]*match
+var cacheMapSync sync.RWMutex
+
+func Init(client *sql.DB) error {
+	if conn != nil {
+		tlog.Error("room tag without db connection")
+		return errors.New("db error")
+	}
+	conn = client
+	loadTagList()
+	return nil
+}
+
+//通过dfa的方式，进行match
+func matchDfa(text string) []int32 {
+	words := strings.Split(text, " ")
+	cacheMapSync.RLock()
+	defer cacheMapSync.RUnlock()
+	var l []int32
+	start := 0
+	tmp := cacheMap
+	for start < len(words) {
+		if m, ok := tmp[words[start]]; !ok {
+			//没有match, 返回最新的cacheMap
+			tmp = cacheMap
+		} else {
+			if m.is_end == true {
+				l = append(l, m.tag_id)
+				tmp = cacheMap
+			} else {
+				tmp = m.next
+			}
+		}
+		start++
+	}
+	return l
+}
+
+//通过简单的方式进行match
+func matchNormal(text string) []int32 {
+	words := strings.Split(text, " ")
+	cacheMapSync.RLock()
+	defer cacheMapSync.RUnlock()
+	var l []int32
+	for _, v := range words {
+		if m, ok := cacheMap[v]; ok {
+			l = append(l, m.tag_id)
+		}
+	}
+	return l
+
+}
+
+func Match(text string) []int32 {
+	return matchDfa(text)
+}
+
+func Reload() {
+	loadTagList()
+}
+
+//构建简单的match方式
+func buildNormalMatch(newMap map[string]*match, keywords string, tag_id int32) {
+	newMap[keywords] = &match{
+		tag_id: tag_id,
+	}
+}
+
+//构建dfa的match
+func buildDfaMatch(newMap map[string]*match, keywords string, tag_id int32) {
+
+	//build dfa transfer
+	words := strings.Split(keywords, " ")
+	tmp := newMap
+	pre := tmp
+	for _, w := range words {
+		if tmp == nil {
+			tmp = make(map[string]*match)
+			tmp[w] = &match{
+				tag_id: tag_id,
+				is_end: false,
+				next:   make(map[string]*match),
+			}
+			pre = tmp
+			tmp = tmp[w].next
+			continue
+		}
+
+		if _, ok := tmp[w]; !ok {
+			tmp[w] = &match{
+				tag_id: tag_id,
+				is_end: false,
+				next:   make(map[string]*match),
+			}
+		}
+		pre = tmp
+		tmp = tmp[w].next
+	}
+
+	end := pre[words[len(words)-1]]
+	end.is_end = true
+}
+
+func loadTagList() {
+	ssql := "select tag_id, tag_name, tag_text from room_tag"
+	rows, err := conn.Query(ssql)
+	if err != nil {
+		tlog.Error(err)
+		return
+	}
+
+	defer rows.Close()
+	newMap := make(map[string]*match)
+	for rows.Next() {
+		var tag_id int32
+		var tag_name string
+		var tag_text string
+		if err := rows.Scan(&tag_id, &tag_name, &tag_text); err != nil {
+			tlog.Error(err)
+			continue
+		}
+		keywords := strings.Split(tag_text, ",")
+		for _, v := range keywords {
+			//先采用dfa的方式进行match
+			buildDfaMatch(newMap, v, tag_id)
+		}
+	}
+
+	tlog.Debug(newMap)
+
+	cacheMapSync.Lock()
+	defer cacheMapSync.Unlock()
+	cacheMap = newMap
+}
