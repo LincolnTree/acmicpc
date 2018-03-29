@@ -2,6 +2,11 @@ AC自动机，字典树加kmp思想，但和kmp有点不一样，直接指向与
 https://www.bilibili.com/video/av6295004/index_2.html#page=1
 
 后缀数组倍增算法：基于基数排序和倍增的思想。
+图的割边与桥：算法核心维护两个数组dfn[i]和low[i],dfn[i]表示节点i的dfs序，low[i]表示节点i能到达节点中最小的dfn值。dfn[u]<low[i]说明
+    u的节点没有指向祖先节点的反向边，所以节点u为割点。
+https://blog.csdn.net/wy250229163/article/details/53769139
+
+康托定理？
 
 观摩一下AC群里的dfa算法：
 https://paste.ubuntu.com/p/tqW3n4B9Xd/
