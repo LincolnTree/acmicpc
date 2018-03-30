@@ -1,3 +1,6 @@
 求解强联通分量有两种方法：kosaraju和Tarjan。Tarjan在昨天求解割点与桥中已经学习过了。
 kosaraju是一种dfs两遍的算法，维护一个dfs序队列和一个记录dfs返回过程的栈：
 https://www.youtube.com/watch?v=RpgcYiky7uw
+
+单纯形法求解线性规划问题
+http://v.youku.com/v_show/id_XMzIzOTg3NDgxMg==.html
